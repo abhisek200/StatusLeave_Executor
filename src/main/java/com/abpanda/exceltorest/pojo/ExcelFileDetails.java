@@ -8,4 +8,6 @@ public class ExcelFileDetails {
     public int rowsToProcess;
     private String hostname;
     private String port;
+    public String username;
+    public String password;
 }

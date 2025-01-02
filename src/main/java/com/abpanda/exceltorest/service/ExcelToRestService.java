@@ -8,7 +8,7 @@ package com.abpanda.exceltorest.service;
 //        URL : - localhost:8080/v1/convert
 //        Body: -
 //        {
-//        "filePath": "/home/dkar/Downloads/edg-prod-export1.xlsx",
+//        "filePath": "<path>/edg-prod-export1.xlsx",
 //        "rowsToProcess": 1000,
 //        "hostname": "localhost",
 //        "port": "1512"
@@ -100,12 +100,21 @@ public class ExcelToRestService {
         return payload;
     }
 
-    // Method to perform a POST request
+    // Method to perform a POST request with Basic Authentication
     public static void makePostRequest(String url, String jsonPayload) throws IOException {
         URL apiUrl = new URL(url);
         HttpURLConnection connection = (HttpURLConnection) apiUrl.openConnection();
         connection.setRequestMethod("POST");
         connection.setRequestProperty("Content-Type", "application/json");
+
+        // Add Basic Authentication header
+        ExcelFileDetails ex = new ExcelFileDetails();
+        String username = ex.username;
+        String password = ex.password;
+        String auth = username + ":" + password;
+        String encodedAuth = Base64.getEncoder().encodeToString(auth.getBytes());
+        connection.setRequestProperty("Authorization", "Basic " + encodedAuth);
+
         connection.setDoOutput(true);
 
         try (OutputStream os = connection.getOutputStream()) {
@@ -174,18 +183,6 @@ public class ExcelToRestService {
         System.out.println("******************** StatusLeave_BulkExecutor **********************");
         System.out.println("**************************************************************************");
 
-    }
-
-    /**
-     * Prompts the user for input and returns the entered value.
-     *
-     * @param scanner the Scanner object to read user input
-     * @param message the prompt message to display
-     * @return the user-provided input
-     */
-    private static String getUserInput(Scanner scanner, String message) {
-        System.out.println(message);
-        return scanner.nextLine();
     }
 
     /**
