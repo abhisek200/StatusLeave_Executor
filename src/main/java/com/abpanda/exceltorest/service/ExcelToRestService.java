@@ -27,9 +27,9 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.*;
-
-import java.net.*;
 
 @Service
 @Slf4j
@@ -96,7 +96,7 @@ public class ExcelToRestService {
                 + "\"itemId\": [\"" + itemId + "\"]"
                 + "}";
 
-        log.info("payload: {}",payload);
+        log.info("payload: {}", payload);
         return payload;
     }
 
@@ -125,81 +125,50 @@ public class ExcelToRestService {
     // Orchestrator method
     public static void processExcelAndPost(String filePath, String apiUrl, int rowsToProcess) throws IOException {
 
-            List<Map<String, String>> rows = readExcelFile(filePath);
+        List<Map<String, String>> rows = readExcelFile(filePath);
 
-            // Prompt the user for the row limit
+        // Prompt the user for the row limit
 //            Scanner scanner = new Scanner(System.in);
 //            System.out.println("Enter the number of rows to process (e.g., 1000):");
 //            int rowsToProcess = scanner.nextInt();
 //            scanner.close();
 
-            // Ensure the limit is within bounds
-            rowsToProcess = Math.min(rowsToProcess, rows.size());
+        // Ensure the limit is within bounds
+        rowsToProcess = Math.min(rowsToProcess, rows.size());
 
-            // Loop through the rows, up to the user-defined limit
-            for (int i = 0; i < rowsToProcess; i++) {
-                Map<String, String> row = rows.get(i);
-                String jsonPayload = createJsonPayload(row);
-                makePostRequest(apiUrl, jsonPayload);
-            }
+        // Loop through the rows, up to the user-defined limit
+        for (int i = 0; i < rowsToProcess; i++) {
+            Map<String, String> row = rows.get(i);
+            String jsonPayload = createJsonPayload(row);
+            makePostRequest(apiUrl, jsonPayload);
+        }
 
-    }
-
-    // Main method
-    public boolean convert(ExcelFileDetails ex) throws IOException {
-        // Display introductory information
-//        printIntroduction();
-
-        // Create a Scanner for user input
-//        Scanner scanner = new Scanner(System.in);
-
-        // Collect inputs from the user
-//        String excelFilePath = getUserInput(scanner, "Enter the exact file path (e.g., C:\\files\\EDG_PRD_Completelist.xlsx):");
-//        String hostname = getUserInput(scanner, "Enter the hostname (e.g., localhost):");
-//        String port = getUserInput(scanner, "Enter the port number (e.g., 1512):");
-
-
-            // Construct the API URL
-            String apiUrl = constructApiUrl(ex.getHostname(), ex.getPort());
-
-            // Display the collected information
-            log.info("\nCollected Information:");
-            log.info("File Path: " + ex.getFilePath());
-            log.info("API URL: " + apiUrl);
-
-            // Process the Excel file and send POST requests
-            processExcelAndPost(ex.getFilePath(), apiUrl, ex.getRowsToProcess());
-
-            return true;
-
-        // Close the Scanner
-//        scanner.close();
     }
 
     /**
      * Prints the introduction and required SQL query details.
      */
-    private static void printIntroduction() {
+    public static void printIntroduction() {
         System.out.println("**************************************************************************");
         System.out.println("******************** StatusLeave_BulkExecutor **********************");
         System.out.println("**************************************************************************");
         System.out.println("Your Excel should be output of the following Query: ");
         System.out.println("SELECT \n" +
-                                   "    sr.[Identifier] AS Identifier,\n" +
-                                   "    pse.[ProcessIdentifier] AS ProcessIdentifier,\n" +
-                                   "    pse.[Workflow2GID] AS Workflow2GID,\n" +
-                                   "    pse.[Status] AS Status,\n" +
-                                   "    wf.[Identifier] AS WorkflowIdentifier\n" +
-                                   "FROM \n" +
-                                   "    [PIM_MAIN].[dbo].[ProcessStatusEntry] pse\n" +
-                                   "JOIN \n" +
-                                   "    [PIM_MAIN].[dbo].[StatusRevision] sr ON pse.[StatusRevisionID] = sr.[ID]\n" +
-                                   "JOIN \n" +
-                                   "    [PIM_MAIN].[dbo].[Workflow2G] wf ON pse.[Workflow2GID] = wf.[ID]\n" +
-                                   "WHERE \n" +
-                                   "    pse.[UserID] IS NULL \n" +
-                                   "    AND pse.[UserGroupID] IS NULL \n" +
-                                   "    AND pse.[Status] = 'Check Staging Data Admin'; <optional/> ");
+                "    sr.[Identifier] AS Identifier,\n" +
+                "    pse.[ProcessIdentifier] AS ProcessIdentifier,\n" +
+                "    pse.[Workflow2GID] AS Workflow2GID,\n" +
+                "    pse.[Status] AS Status,\n" +
+                "    wf.[Identifier] AS WorkflowIdentifier\n" +
+                "FROM \n" +
+                "    [PIM_MAIN].[dbo].[ProcessStatusEntry] pse\n" +
+                "JOIN \n" +
+                "    [PIM_MAIN].[dbo].[StatusRevision] sr ON pse.[StatusRevisionID] = sr.[ID]\n" +
+                "JOIN \n" +
+                "    [PIM_MAIN].[dbo].[Workflow2G] wf ON pse.[Workflow2GID] = wf.[ID]\n" +
+                "WHERE \n" +
+                "    pse.[UserID] IS NULL <Conditional/> \n" +
+                "    AND pse.[UserGroupID] IS NULL <Conditional/> \n" +
+                "    AND pse.[Status] = 'Check Staging Data Admin'; <optional/> ");
 
         System.out.println("**************************************************************************");
         System.out.println("******************** StatusLeave_BulkExecutor **********************");
@@ -223,10 +192,41 @@ public class ExcelToRestService {
      * Constructs the API URL from the provided hostname and port.
      *
      * @param hostname the hostname provided by the user
-     * @param port the port number provided by the user
+     * @param port     the port number provided by the user
      * @return the constructed API URL
      */
     private static String constructApiUrl(String hostname, String port) {
         return "http://" + hostname + ":" + port + "/rest/V1.0/manage/workflow/status/leave";
+    }
+
+    // Main method
+    public boolean convert(ExcelFileDetails ex) throws IOException {
+        // Display introductory information
+//        printIntroduction();
+
+        // Create a Scanner for user input
+//        Scanner scanner = new Scanner(System.in);
+
+        // Collect inputs from the user
+//        String excelFilePath = getUserInput(scanner, "Enter the exact file path (e.g., C:\\files\\EDG_PRD_Completelist.xlsx):");
+//        String hostname = getUserInput(scanner, "Enter the hostname (e.g., localhost):");
+//        String port = getUserInput(scanner, "Enter the port number (e.g., 1512):");
+
+
+        // Construct the API URL
+        String apiUrl = constructApiUrl(ex.getHostname(), ex.getPort());
+
+        // Display the collected information
+        log.info("\nCollected Information:");
+        log.info("File Path: " + ex.getFilePath());
+        log.info("API URL: " + apiUrl);
+
+        // Process the Excel file and send POST requests
+        processExcelAndPost(ex.getFilePath(), apiUrl, ex.getRowsToProcess());
+
+        return true;
+
+        // Close the Scanner
+//        scanner.close();
     }
 }
