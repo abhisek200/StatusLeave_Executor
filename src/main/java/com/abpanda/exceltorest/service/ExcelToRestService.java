@@ -101,19 +101,19 @@ public class ExcelToRestService {
     }
 
     // Method to perform a POST request with Basic Authentication
-    public static void makePostRequest(String url, String jsonPayload) throws IOException {
+    public static void makePostRequest(String url, String jsonPayload, String username, String password) throws IOException {
         URL apiUrl = new URL(url);
         HttpURLConnection connection = (HttpURLConnection) apiUrl.openConnection();
         connection.setRequestMethod("POST");
         connection.setRequestProperty("Content-Type", "application/json");
 
         // Add Basic Authentication header
-        ExcelFileDetails ex = new ExcelFileDetails();
-        String username = ex.username;
-        String password = ex.password;
+
         String auth = username + ":" + password;
         String encodedAuth = Base64.getEncoder().encodeToString(auth.getBytes());
         connection.setRequestProperty("Authorization", "Basic " + encodedAuth);
+//        System.out.println("Encoded Auth: " + encodedAuth);
+        log.info(connection.getRequestProperty("Authorization"));
 
         connection.setDoOutput(true);
 
@@ -132,9 +132,9 @@ public class ExcelToRestService {
     }
 
     // Orchestrator method
-    public static void processExcelAndPost(String filePath, String apiUrl, int rowsToProcess) throws IOException {
+    public static void processExcelAndPost(ExcelFileDetails ex, String apiUrl) throws IOException {
 
-        List<Map<String, String>> rows = readExcelFile(filePath);
+        List<Map<String, String>> rows = readExcelFile(ex.getFilePath());
 
         // Prompt the user for the row limit
 //            Scanner scanner = new Scanner(System.in);
@@ -143,13 +143,13 @@ public class ExcelToRestService {
 //            scanner.close();
 
         // Ensure the limit is within bounds
-        rowsToProcess = Math.min(rowsToProcess, rows.size());
+        ex.setRowsToProcess(Math.min(ex.getRowsToProcess(), rows.size()));
 
         // Loop through the rows, up to the user-defined limit
-        for (int i = 0; i < rowsToProcess; i++) {
+        for (int i = 0; i < ex.getRowsToProcess(); i++) {
             Map<String, String> row = rows.get(i);
             String jsonPayload = createJsonPayload(row);
-            makePostRequest(apiUrl, jsonPayload);
+            makePostRequest(apiUrl, jsonPayload, ex.getUsername(), ex.getPassword());
         }
 
     }
@@ -198,32 +198,19 @@ public class ExcelToRestService {
 
     // Main method
     public boolean convert(ExcelFileDetails ex) throws IOException {
-        // Display introductory information
-//        printIntroduction();
 
-        // Create a Scanner for user input
-//        Scanner scanner = new Scanner(System.in);
-
-        // Collect inputs from the user
-//        String excelFilePath = getUserInput(scanner, "Enter the exact file path (e.g., C:\\files\\EDG_PRD_Completelist.xlsx):");
-//        String hostname = getUserInput(scanner, "Enter the hostname (e.g., localhost):");
-//        String port = getUserInput(scanner, "Enter the port number (e.g., 1512):");
-
-
-        // Construct the API URL
         String apiUrl = constructApiUrl(ex.getHostname(), ex.getPort());
 
         // Display the collected information
         log.info("\nCollected Information:");
         log.info("File Path: " + ex.getFilePath());
         log.info("API URL: " + apiUrl);
+        log.info("username : " + ex.username);
+        log.info("password : " + ex.password);
 
         // Process the Excel file and send POST requests
-        processExcelAndPost(ex.getFilePath(), apiUrl, ex.getRowsToProcess());
-
+        processExcelAndPost(ex, apiUrl);
         return true;
 
-        // Close the Scanner
-//        scanner.close();
     }
 }
